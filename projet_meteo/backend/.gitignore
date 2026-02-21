@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Environnement
+venv/
+.env
+.env.*
+
+# IA / ML
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.onnx
+
+# Data
+*.csv
+*.zip
+*.rar
+data/
+datasets/
+
+# Cache
+.cache/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
