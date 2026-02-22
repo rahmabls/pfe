@@ -1,8 +1,14 @@
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # =========================
-# Création API (DOIT ETRE AVANT LES ROUTES)
+# Création de l'application
 # =========================
 app = FastAPI(
     title="Weather AI API",
@@ -11,7 +17,7 @@ app = FastAPI(
 )
 
 # =========================
-# CORS (pour Flutter/mobile)
+# Configuration CORS (Flutter / Mobile)
 # =========================
 app.add_middleware(
     CORSMiddleware,
@@ -44,14 +50,14 @@ app.include_router(wind_alerts_router)
 app.include_router(wind_router)
 
 # =========================
-# Route test
+# Route principale (test)
 # =========================
 @app.get("/")
 def home():
     return {
         "status": "Weather AI backend running",
         "modules": [
-            "temperature forecast",
+            "temperature prediction",
             "rain probability",
             "heatwave detection",
             "wind alerts",
