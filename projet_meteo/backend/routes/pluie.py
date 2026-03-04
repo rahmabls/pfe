@@ -12,7 +12,6 @@ scaler = joblib.load(os.path.join(BASE_DIR, "models", "scaler_rain.pkl"))
 features = joblib.load(os.path.join(BASE_DIR, "models", "features_rain.pkl"))
 
 
-
 @router.post("/rain")
 def predict_rain(data: dict):
 
