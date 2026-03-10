@@ -1,77 +1,41 @@
 from fastapi import APIRouter
-from routes.prediction_temp import forecast_next_hours
-from datetime import datetime, timedelta
+import services.weather_data_service as data_svc
+import services.ml_service as ml
 
-router = APIRouter(prefix="/alert", tags=["Alerts"])
+router = APIRouter(prefix="/alertes/temperature", tags=["🚨 Alertes Température"])
 
-
-
-# ---------------------------------------------------
-# Détection d'événements
-# ---------------------------------------------------
-def detect_heatwave(temps, hours):
-
-    alerts = []
-
-    count = 0
-    start = None
-
-    for i,t in enumerate(temps):
-
-        if t >= 38:
-            if count == 0:
-                start = hours[i]
-            count += 1
-        else:
-            if count >= 3:
-                alerts.append((start,hours[i-1],"canicule"))
-            count = 0
-
-    if count >= 3:
-        alerts.append((start,hours[-1],"canicule"))
-
-    return alerts
+# Seuils configurables
+SEUIL_FROID = 5.0     # °C
+SEUIL_CHAUD = 38.0    # °C
 
 
-def detect_coldwave(temps, hours):
+@router.get("/")
+def alertes_temperature():
+    """Retourne les alertes de température (froid extrême / canicule)."""
+    features = data_svc.get_features_for_temp()
+    temp = features["temperature_2m"]
+    ressenti = features["apparent_temperature"]
+    alertes = []
 
-    alerts = []
-    count = 0
-    start = None
+    if temp <= SEUIL_FROID:
+        alertes.append({
+            "type": "FROID",
+            "niveau": "DANGER" if temp <= 0 else "ATTENTION",
+            "message": f"❄️ Température très basse : {round(temp, 1)}°C",
+        })
 
-    for i,t in enumerate(temps):
-
-        if t <= 0:
-            if count == 0:
-                start = hours[i]
-            count += 1
-        else:
-            if count >= 2:
-                alerts.append((start,hours[i-1],"froid"))
-            count = 0
-
-    if count >= 2:
-        alerts.append((start,hours[-1],"froid"))
-
-    return alerts
-
-
-# ---------------------------------------------------
-# API endpoint
-# ---------------------------------------------------
-@router.post("/24h")
-def alert_24h(current_weather: dict):
-
-    temps = forecast_next_hours(current_weather,24)
-
-    now = datetime.now()
-    hours = [(now + timedelta(hours=i+1)).strftime("%H:%M") for i in range(24)]
-
-    heat = detect_heatwave(temps,hours)
-    cold = detect_coldwave(temps,hours)
+    if temp >= SEUIL_CHAUD:
+        canicule = ml.predict_canicule(data_svc.get_features_for_canicule())
+        alertes.append({
+            "type": "CHALEUR",
+            "niveau": "DANGER" if canicule["probabilite"] >= 70 else "ATTENTION",
+            "message": f"🔥 Chaleur extrême : {round(temp, 1)}°C (ressenti {round(ressenti, 1)}°C)",
+            "probabilite_canicule": canicule["probabilite"],
+        })
 
     return {
-        "temperature": temps,
-        "alerts_heatwave": heat,
-        "alerts_coldwave": cold
+        "temperature_C": round(temp, 1),
+        "ressenti_C": round(ressenti, 1),
+        "alertes": alertes,
+        "nombre_alertes": len(alertes),
     }

@@ -1,31 +1,27 @@
 from fastapi import APIRouter
-import pandas as pd
-import joblib
-import os
+import services.ml_service as ml
+import services.weather_data_service as data_svc
 
-router = APIRouter(prefix="/predict", tags=["Rain"])
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-model = joblib.load(os.path.join(BASE_DIR, "models", "model_rain_logistic.pkl"))
-scaler = joblib.load(os.path.join(BASE_DIR, "models", "scaler_rain.pkl"))
-features = joblib.load(os.path.join(BASE_DIR, "models", "features_rain.pkl"))
+router = APIRouter(prefix="/prediction/pluie", tags=["🌧️ Pluie"])
 
 
-@router.post("/rain")
-def predict_rain(data: dict):
+@router.get("/")
+def predict_pluie():
+    """Prédit la probabilité de pluie à partir des données actuelles."""
+    features = data_svc.get_features_for_rain()
+    result = ml.predict_rain(features)
 
-    X = pd.DataFrame([data])[features]
-    X = scaler.transform(X)
-
-    proba = model.predict_proba(X)[0][1]
-
-    if proba > 0.5:
-        status = "pluie probable"
+    # Message lisible pour Flutter
+    if result["probabilite"] >= 70:
+        message = "🌧️ Forte probabilité de pluie"
+    elif result["probabilite"] >= 40:
+        message = "🌦️ Pluie possible"
     else:
-        status = "pas de pluie"
+        message = "☀️ Peu de risque de pluie"
 
     return {
-        "pluie": status,
-        "probabilite": round(float(proba*100),2)
+        **result,
+        "message": message,
+        "humidite_actuelle": round(features["relative_humidity_2m"], 1),
+        "pression_actuelle": round(features["pressure_msl"], 1),
     }

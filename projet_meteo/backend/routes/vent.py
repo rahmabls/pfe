@@ -1,27 +1,27 @@
 from fastapi import APIRouter
-import joblib
-import pandas as pd
-import os
+import services.ml_service as ml
+import services.weather_data_service as data_svc
 
-router = APIRouter(prefix="/predict", tags=["Wind"])
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-model = joblib.load(os.path.join(BASE_DIR, "models", "model_wind_binary.pkl"))
-scaler = joblib.load(os.path.join(BASE_DIR, "models", "scaler_wind_binary.pkl"))
-features = joblib.load(os.path.join(BASE_DIR, "models", "features_wind_binary.pkl"))
+router = APIRouter(prefix="/prediction/vent", tags=["💨 Vent"])
 
 
-@router.post("/wind")
-def predict_wind(data: dict):
+@router.get("/")
+def predict_vent():
+    """Prédit si un vent fort est probable."""
+    features = data_svc.get_features_for_wind()
+    result = ml.predict_wind_strong(features)
 
-    X = pd.DataFrame([data])[features]
-    X = scaler.transform(X)
-
-    pred = model.predict(X)[0]
-    proba = model.predict_proba(X)[0][1]
-
-    if pred == 1:
-        return {"vent":"fort","niveau":"jaune","probabilite":float(proba)}
+    if result["probabilite"] >= 70:
+        message = "💨 Vent fort prévu — soyez prudent"
+    elif result["probabilite"] >= 40:
+        message = "🌬️ Vent modéré possible"
     else:
-        return {"vent":"normal","niveau":"vert","probabilite":float(1-proba)}
+        message = "🍃 Vent faible prévu"
+
+    return {
+        **result,
+        "message": message,
+        "vitesse_actuelle_kmh": round(features["wind_speed_10m"], 1),
+        "rafales_actuelles_kmh": round(features["wind_gusts_10m"], 1),
+        "direction_deg": round(features["wind_direction_10m"], 0),
+    }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'weather_model.dart';
-import 'weather_service.dart';
+import 'api_service.dart';
 import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -11,28 +10,34 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Weather? weather;
+  Map<String, dynamic>? meteo;
   bool isLoading = true;
+  String? erreur;
 
   @override
   void initState() {
     super.initState();
-    _loadWeather();
+    _chargerMeteo();
   }
 
-  Future<void> _loadWeather() async {
+  Future<void> _chargerMeteo() async {
+    setState(() { isLoading = true; erreur = null; });
     try {
-      WeatherService service = WeatherService();
-      Weather w = await service.fetchWeather();
-
-      setState(() {
-        weather = w;
-        isLoading = false;
-      });
+      final data = await ApiService.get("/meteo/accueil");
+      setState(() { meteo = data; isLoading = false; });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() { isLoading = false; erreur = "Impossible de charger la météo"; });
+    }
+  }
+
+  IconData _iconeMeteo(String? icone) {
+    switch (icone) {
+      case "rainy":         return Icons.grain;
+      case "windy":         return Icons.air;
+      case "cloudy":        return Icons.cloud;
+      case "partly_cloudy": return Icons.cloud_queue;
+      case "hot":           return Icons.wb_sunny;
+      default:              return Icons.wb_sunny;
     }
   }
 
@@ -43,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen> {
       extendBody: true,
       body: Stack(
         children: [
-          // ===== FOND DÉGRADÉ (IDENTIQUE) =====
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -53,503 +57,276 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
           SafeArea(
             child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : CustomScrollView(
-                    slivers: [
-                      /* ===== TITRE + NUAGE (IDENTIQUE) ===== */
-                      SliverAppBar(
-                        pinned: true,
-                        floating: false,
-                        backgroundColor: Colors.transparent,
-                        expandedHeight: 220,
-                        flexibleSpace: FlexibleSpaceBar(
-                          background: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                "Béni Mellal",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-
-                              //valeur API
-                              Text(
-                                "${weather!.temp.toStringAsFixed(0)}° • ${weather!.description}",
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                ),
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              Icon(
-                                Icons.cloud,
-                                size: 140,
-                                color: Colors.white.withOpacity(0.4),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      /* ===== CONTENU SCROLLABLE (IDENTIQUE) ===== */
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                height: 120,
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  children: const [
-                                    HeureCard("1", "20°"),
-                                    HeureCard("Now", "20°"),
-                                    HeureCard("3", "20°"),
-                                    HeureCard("4", "20°"),
-                                    HeureCard("5", "20°"),
-                                    HeureCard("6", "20°"),
-                                    HeureCard("7", "20°"),
-                                    HeureCard("8", "20°"),
-                                    HeureCard("9", "20°"),
-                                    HeureCard("10", "20°"),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              Row(
-                                children: const [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    color: Colors.white70,
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "PRÉVISIONS SUR 10 JOURS",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.1),
-                                  ),
-                                ),
-                                child: Column(
-                                  children: const [
-                                    ForecastRow(
-                                      day: "Auj.",
-                                      min: 11,
-                                      max: 16,
-                                      icon: Icons.cloud,
-                                    ),
-                                    ForecastRow(
-                                      day: "Mar.",
-                                      min: 11,
-                                      max: 20,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                    ForecastRow(
-                                      day: "Mer.",
-                                      min: 11,
-                                      max: 22,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                    ForecastRow(
-                                      day: "Jeu.",
-                                      min: 12,
-                                      max: 22,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                    ForecastRow(
-                                      day: "Ven.",
-                                      min: 9,
-                                      max: 16,
-                                      icon: Icons.cloud,
-                                    ),
-                                    ForecastRow(
-                                      day: "Sam.",
-                                      min: 7,
-                                      max: 16,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                    ForecastRow(
-                                      day: "Dim.",
-                                      min: 7,
-                                      max: 20,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                    ForecastRow(
-                                      day: "Lun.",
-                                      min: 10,
-                                      max: 22,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                    ForecastRow(
-                                      day: "Mar.",
-                                      min: 12,
-                                      max: 23,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                    ForecastRow(
-                                      day: "Mer.",
-                                      min: 12,
-                                      max: 23,
-                                      icon: Icons.wb_sunny,
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              /* ===== GRILLE D’INFOS ===== */
-                              GridView.count(
-                                crossAxisCount: 2,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                                children: const [
-                                  InfoMiniCard(
-                                    title: "RESSENTI",
-                                    value: "15°",
-                                    icon: Icons.thermostat,
-                                  ),
-                                  InfoMiniCard(
-                                    title: "INDICE UV",
-                                    value: "4",
-                                    icon: Icons.wb_sunny,
-                                  ),
-                                  InfoMiniCard(
-                                    title: "VENT",
-                                    value: "8 km/h",
-                                    icon: Icons.air,
-                                  ),
-                                  InfoMiniCard(
-                                    title: "HUMIDITÉ",
-                                    value: "81%",
-                                    icon: Icons.water_drop,
-                                  ),
-                                  InfoMiniCard(
-                                    title: "VISIBILITÉ",
-                                    value: "14 km",
-                                    icon: Icons.visibility,
-                                  ),
-                                  InfoMiniCard(
-                                    title: "PRÉCIPITATIONS",
-                                    value: "3 mm",
-                                    icon: Icons.water_drop_outlined,
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              /* ===== PRESSION ===== */
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.1),
-                                  ),
-                                ),
-                                child: const Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "PRESSION",
-                                      style: TextStyle(color: Colors.white70),
-                                    ),
-                                    SizedBox(height: 10),
-                                    Text(
-                                      "1.024 hPa",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                : erreur != null
+                    ? _buildErreur()
+                    : _buildContenu(),
           ),
         ],
       ),
       floatingActionButton: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ChatScreen()),
-          );
-        },
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen())),
         child: Container(
-          width: 70,
-          height: 70,
+          width: 70, height: 70,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
               colors: [Color(0xFF8E2DE2), Color(0xFF6A4CFF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF8E2DE2).withOpacity(0.6),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
+            boxShadow: [BoxShadow(color: const Color(0xFF8E2DE2).withOpacity(0.6), blurRadius: 20)],
           ),
           child: const Icon(Icons.psychology, color: Colors.white, size: 32),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: _buildNavBar(),
+    );
+  }
 
-      /* ===== BARRE ARRONDIE (TU NE VOULAIS PAS TOUCHER) ===== */
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Container(
-          height: 70,
-          decoration: BoxDecoration(
-            color: const Color(0xFF2B1055).withOpacity(0.95),
-            borderRadius: BorderRadius.circular(35), // 🔹 arrondi
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+  Widget _buildErreur() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.wifi_off, color: Colors.white54, size: 60),
+          const SizedBox(height: 12),
+          Text(erreur!, style: const TextStyle(color: Colors.white70)),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: _chargerMeteo, child: const Text("Réessayer")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContenu() {
+    final pred     = meteo!["predictions"] as Map<String, dynamic>;
+    final pluie    = pred["pluie"]         as Map<String, dynamic>;
+    final vent     = pred["vent"]          as Map<String, dynamic>;
+    final canicule = pred["canicule"]      as Map<String, dynamic>;
+
+    return RefreshIndicator(
+      onRefresh: _chargerMeteo,
+      child: CustomScrollView(
+        slivers: [
+          // ── Header ──────────────────────────────────────────────────────
+          SliverAppBar(
+            pinned: true,
+            floating: false,
+            backgroundColor: Colors.transparent,
+            expandedHeight: 220,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    meteo!["ville"] ?? "Béni Mellal",
+                    style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "${meteo!["temperature_actuelle_C"]}°C • ${meteo!["ressenti_C"]}° ressenti",
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                  const SizedBox(height: 10),
+                  Icon(_iconeMeteo(meteo!["icone"]), size: 120, color: Colors.white.withOpacity(0.5)),
+                ],
               ),
-            ],
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // ⚙️ Paramètres (gauche)
-              IconButton(
-                icon: const Icon(Icons.settings, color: Colors.white, size: 26),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/settings');
-                },
-              ),
 
-              // 🏠 Accueil (mis en avant au centre)
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF6A4CFF), // violet plus clair
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.home, color: Colors.white, size: 30),
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/');
-                  },
-                ),
-              ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Prévisions horaires ML ─────────────────────────────
+                  SizedBox(
+                    height: 120,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _HeureCard("Maint.", "${meteo!["temperature_actuelle_C"]}°"),
+                        _HeureCard("+1h",   "${pred["temperature_1h_C"]}°"),
+                        _HeureCard("+24h",  "${pred["temperature_24h_C"]}°"),
+                      ],
+                    ),
+                  ),
 
-              // 📅 Prévisions (droite)
-              IconButton(
-                icon: const Icon(
-                  Icons.calendar_month,
-                  color: Colors.white,
-                  size: 26,
-                ),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/forecast');
-                },
+                  const SizedBox(height: 20),
+
+                  // ── Grille infos live ──────────────────────────────────
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    children: [
+                      _InfoMiniCard("RESSENTI",  "${meteo!["ressenti_C"]}°",           Icons.thermostat),
+                      _InfoMiniCard("HUMIDITÉ",  "${meteo!["humidite_pct"]}%",          Icons.water_drop),
+                      _InfoMiniCard("VENT",      "${meteo!["vent_kmh"]} km/h",          Icons.air),
+                      _InfoMiniCard("RAFALES",   "${meteo!["rafales_kmh"]} km/h",       Icons.storm),
+                      _InfoMiniCard("UV",        "${meteo!["uv_index"]}",               Icons.wb_sunny),
+                      _InfoMiniCard("NUAGES",    "${meteo!["couverture_nuageuse_pct"]}%", Icons.cloud),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Pression ───────────────────────────────────────────
+                  _CarteInfo(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("PRESSION", style: TextStyle(color: Colors.white70)),
+                        const SizedBox(height: 8),
+                        Text(
+                          "${meteo!["pression_hpa"]} hPa",
+                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Alertes ML ─────────────────────────────────────────
+                  if (pluie["pluie_probable"] == true || vent["vent_fort"] == true || canicule["canicule"] == true)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "⚠️ ALERTES",
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1),
+                        ),
+                        const SizedBox(height: 8),
+                        if (pluie["pluie_probable"] == true)
+                          _AlerteBadge("🌧️ Pluie probable — ${pluie["probabilite"]}%", Colors.blueAccent),
+                        if (vent["vent_fort"] == true)
+                          _AlerteBadge("💨 Vent fort — ${vent["probabilite"]}%", Colors.orangeAccent),
+                        if (canicule["canicule"] == true)
+                          _AlerteBadge("🔥 Risque canicule — ${canicule["probabilite"]}%", Colors.redAccent),
+                      ],
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: const Color(0xFF2B1055).withOpacity(0.95),
+          borderRadius: BorderRadius.circular(35),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            IconButton(icon: const Icon(Icons.settings, color: Colors.white, size: 26), onPressed: () => Navigator.pushNamed(context, '/settings')),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(color: Color(0xFF6A4CFF), shape: BoxShape.circle),
+              child: IconButton(icon: const Icon(Icons.home, color: Colors.white, size: 30), onPressed: () => Navigator.pushNamed(context, '/')),
+            ),
+            IconButton(icon: const Icon(Icons.calendar_month, color: Colors.white, size: 26), onPressed: () => Navigator.pushNamed(context, '/forecast')),
+          ],
         ),
       ),
     );
   }
 }
 
-/* ===== CARTES (IDENTIQUES) ===== */
-class InfoMiniCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
+// ── Widgets réutilisables ─────────────────────────────────────────────────────
 
-  const InfoMiniCard({
-    super.key,
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: const Color(0xFFC6B6FF)),
-          const SizedBox(height: 6),
-          Text(title, style: const TextStyle(color: Colors.white70)),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/* ===== PRÉVISIONS 10 JOURS ===== */
-class ForecastRow extends StatelessWidget {
-  final String day;
-  final int min;
-  final int max;
-  final IconData icon;
-
-  const ForecastRow({
-    super.key,
-    required this.day,
-    required this.min,
-    required this.max,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    double ratio = (max - min) / 15;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              day,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ),
-          Icon(icon, color: Colors.yellowAccent, size: 22),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 30,
-            child: Text("$min°", style: const TextStyle(color: Colors.white70)),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                FractionallySizedBox(
-                  widthFactor: ratio.clamp(0.2, 1.0),
-                  child: Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8AFF8A), Color(0xFFFFE066)],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            "$max°",
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/* ===== CARTES HORAIRES ===== */
-class HeureCard extends StatelessWidget {
-  final String hour;
-  final String temp;
-
-  const HeureCard(this.hour, this.temp, {super.key});
-
+class _HeureCard extends StatelessWidget {
+  final String hour, temp;
+  const _HeureCard(this.hour, this.temp);
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 6),
       width: 80,
-      decoration: BoxDecoration(
-        color: const Color(0xFF6A4CFF).withOpacity(0.25),
-        borderRadius: BorderRadius.circular(18),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFF6A4CFF).withOpacity(0.25), borderRadius: BorderRadius.circular(18)),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            hour,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
+          Text(hour, style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 6),
-          Icon(Icons.cloud, color: Colors.white),
+          const Icon(Icons.cloud, color: Colors.white),
           const SizedBox(height: 6),
-          Text(
-            temp,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(temp, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
+    );
+  }
+}
+
+class _InfoMiniCard extends StatelessWidget {
+  final String title, value;
+  final IconData icon;
+  const _InfoMiniCard(this.title, this.value, this.icon);
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(18)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: const Color(0xFFC6B6FF)),
+          const SizedBox(height: 6),
+          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CarteInfo extends StatelessWidget {
+  final Widget child;
+  const _CarteInfo({required this.child});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _AlerteBadge extends StatelessWidget {
+  final String message;
+  final Color color;
+  const _AlerteBadge(this.message, this.color);
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
     );
   }
 }
