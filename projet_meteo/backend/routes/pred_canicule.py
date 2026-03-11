@@ -1,36 +1,32 @@
-
 from fastapi import APIRouter
-import pandas as pd
-import joblib
-import os
+import services.ml_service as ml
+import services.weather_data_service as data_svc
 
-router = APIRouter(prefix="/predict", tags=["Rain"])
+router = APIRouter(prefix="/prediction/canicule", tags=["🔥 Canicule"])
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-model = joblib.load(os.path.join(BASE_DIR, "models", "model_extreme_logreg.pkl"))
-scaler = joblib.load(os.path.join(BASE_DIR, "models", "scaler_extreme.pkl"))
-features = joblib.load(os.path.join(BASE_DIR, "models", "features_extreme.pkl"))
+@router.get("/")
+def predict_canicule():
+    """Prédit le risque de canicule."""
+    features = data_svc.get_features_for_canicule()
+    result = ml.predict_canicule(features)
 
-labels = {
-    0: ("froid","bleu"),
-    1: ("normal","vert"),
-    2: ("canicule","rouge")
-}
-
-@router.post("/extreme")
-def predict_extreme(data: dict):
-
-    X = pd.DataFrame([data])[features]
-    X = scaler.transform(X)
-
-    proba = model.predict_proba(X)[0]
-    pred = proba.argmax()
-
-    event,level = labels[pred]
+    if result["probabilite"] >= 70:
+        message = "🔥 Risque élevé de canicule — restez hydraté"
+        niveau = "ÉLEVÉ"
+    elif result["probabilite"] >= 40:
+        message = "⚠️ Chaleur intense possible"
+        niveau = "MODÉRÉ"
+    else:
+        message = "✅ Pas de risque de canicule"
+        niveau = "FAIBLE"
 
     return {
-        "event": event,
-        "niveau": level,
-        "probabilite": float(proba[pred])
+        **result,
+        "message": message,
+        "niveau_risque": niveau,
+        "temperature_actuelle_C": round(features["temperature_2m"], 1),
+        "ressenti_C": round(features["apparent_temperature"], 1),
+        "humidite_pct": round(features["relative_humidity_2m"], 1),
+        "uv_index": round(features["uv_index"], 1),
     }

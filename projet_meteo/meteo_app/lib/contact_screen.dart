@@ -1,78 +1,92 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 
 class ContactScreen extends StatelessWidget {
   const ContactScreen({super.key});
+
+  // ── Connexion via backend ─────────────────────────────────────────────────
+  Future<void> _connecter(BuildContext context, String email, String methode) async {
+    try {
+      await ApiService.post("/preferences/personnalisation/connecter", {
+        "email": email,
+        "methode": methode,
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("✅ Connecté avec $email"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur : $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   void _showConnexionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF3A1A6E), Color(0xFF1B1F3B)],
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF3A1A6E), Color(0xFF1B1F3B)],
+          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50, height: 5,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(color: Colors.white70, borderRadius: BorderRadius.circular(10)),
             ),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 50,
-                height: 5,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white70,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+            const Text(
+              "Connexion au service",
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
 
-              const Text(
-                "Connexion au service",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            // Google
+            _connexionTile(
+              icon: Icons.g_mobiledata,
+              text: "Se connecter avec Google",
+              onTap: () {
+                Navigator.pop(ctx);
+                _showGoogleChoice(context);
+              },
+            ),
 
-              const SizedBox(height: 20),
+            // Email
+            _connexionTile(
+              icon: Icons.email,
+              text: "Se connecter par Gmail / Téléphone",
+              onTap: () {
+                Navigator.pop(ctx);
+                _showEmailDialog(context);
+              },
+            ),
 
-              _connexionTile(
-                icon: Icons.g_mobiledata,
-                text: "Se connecter avec Google",
-                onTap: () {
-                  Navigator.pop(context);
-                  _showGoogleChoice(context);
-                },
-              ),
+            // QR Code
+            _connexionTile(
+              icon: Icons.qr_code,
+              text: "Se connecter avec QR Code",
+              onTap: () => Navigator.pop(ctx),
+            ),
 
-              _connexionTile(
-                icon: Icons.email,
-                text: "Se connecter par Gmail / Téléphone",
-                onTap: () {
-                  Navigator.pop(context);
-                  _showEmailPhoneDialog(context);
-                },
-              ),
-
-              _connexionTile(
-                icon: Icons.qr_code,
-                text: "Se connecter avec QR Code",
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 
@@ -84,11 +98,7 @@ class ContactScreen extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: Colors.white),
       title: Text(text, style: const TextStyle(color: Colors.white)),
-      trailing: const Icon(
-        Icons.arrow_forward_ios,
-        color: Colors.white70,
-        size: 16,
-      ),
+      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
       onTap: onTap,
     );
   }
@@ -96,51 +106,62 @@ class ContactScreen extends StatelessWidget {
   void _showGoogleChoice(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Choisir un compte Google"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              ListTile(
-                leading: Icon(Icons.person),
-                title: Text("nasima@gmail.com"),
-              ),
-              ListTile(
-                leading: Icon(Icons.person),
-                title: Text("nasima.erraki@gmail.com"),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: const Text("Choisir un compte Google"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text("nasima@gmail.com"),
+              onTap: () {
+                Navigator.pop(ctx);
+                _connecter(context, "nasima@gmail.com", "google");
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text("nasima.erraki@gmail.com"),
+              onTap: () {
+                Navigator.pop(ctx);
+                _connecter(context, "nasima.erraki@gmail.com", "google");
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  void _showEmailPhoneDialog(BuildContext context) {
+  void _showEmailDialog(BuildContext context) {
+    final ctrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Connexion"),
-          content: const TextField(
-            decoration: InputDecoration(
-              labelText: "Email ou numéro de téléphone",
-              border: OutlineInputBorder(),
-            ),
+      builder: (ctx) => AlertDialog(
+        title: const Text("Connexion"),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(
+            labelText: "Email ou numéro de téléphone",
+            border: OutlineInputBorder(),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Annuler"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Valider"),
-            ),
-          ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Annuler"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (ctrl.text.trim().isNotEmpty) {
+                _connecter(context, ctrl.text.trim(), "email");
+              }
+            },
+            child: const Text("Valider"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -163,10 +184,9 @@ class ContactScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              "Obtenez de l’aide et une assistance pour votre application météo.",
+              "Obtenez de l'aide et une assistance pour votre application météo.",
               style: TextStyle(color: Colors.white70),
             ),
-
             const SizedBox(height: 16),
 
             _helpTile(
@@ -174,13 +194,11 @@ class ContactScreen extends StatelessWidget {
               title: "Chat texte",
               onTap: () => _showConnexionSheet(context),
             ),
-
             _helpTile(
               icon: Icons.headset,
               title: "Gestion à distance",
               onTap: () => _showConnexionSheet(context),
             ),
-
             _helpTile(
               icon: Icons.send,
               title: "Envoyer une question",
@@ -202,11 +220,7 @@ class ContactScreen extends StatelessWidget {
       child: ListTile(
         leading: Icon(icon, color: Colors.white),
         title: Text(title, style: const TextStyle(color: Colors.white)),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          color: Colors.white70,
-          size: 16,
-        ),
+        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
         onTap: onTap,
       ),
     );

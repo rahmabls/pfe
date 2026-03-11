@@ -3,13 +3,11 @@ import os
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# =========================
 # Création de l'application
-# =========================
+
 app = FastAPI(
     title="Weather AI API",
     description="API de prévision météo intelligente - PFE",
@@ -37,6 +35,7 @@ from routes.prediction_temp import router as temperature_router
 from routes.temp_alerts import router as temp_alerts_router
 from routes.vent_alerts import router as wind_alerts_router
 from routes.vent import router as wind_router
+from routes.user_preferences import router as user_preferences_router   # ✅ NOUVEAU
 
 # =========================
 # Inclusion des routes
@@ -48,6 +47,9 @@ app.include_router(temperature_router)
 app.include_router(temp_alerts_router)
 app.include_router(wind_alerts_router)
 app.include_router(wind_router)
+app.include_router(user_preferences_router)   # 
+
+
 
 # =========================
 # Route principale (test)
@@ -61,6 +63,8 @@ def home():
             "rain probability",
             "heatwave detection",
             "wind alerts",
-            "astronomy data"
+            "astronomy data",
+            "user preferences",
+            "local weather settings",
         ]
     }

@@ -1,21 +1,52 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
-
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  bool allowNotifications = true;
-  String alertMode = "son"; // "son" ou "discret"
+  Map<String, dynamic>? data;
+  bool isLoading = true;
 
-  bool lockScreenAllowed = true;
-  bool badgeAllowed = true;
-  bool popupAllowed = true;
+  @override
+  void initState() {
+    super.initState();
+    _charger();
+  }
 
-  String lockScreenContent = "afficher"; // "afficher" ou "masquer"
+  Future<void> _charger() async {
+    try {
+      final res = await ApiService.get("/notifications/");
+      setState(() { data = res; isLoading = false; });
+    } catch (_) {
+      setState(() { isLoading = false; });
+    }
+  }
+
+  Future<void> _patch(String endpoint, Map<String, dynamic> body) async {
+    try {
+      final res = await ApiService.patch(endpoint, body);
+      setState(() { data = res; });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur : $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _patchCategorie(Map<String, dynamic> body) async {
+    try {
+      final res = await ApiService.patch("/notifications/categories", body);
+      setState(() { data!["categories"] = res["categories"] ?? res; });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur : $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,153 +63,140 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             colors: [Color(0xFF3A1A6E), Color(0xFF1B1F3B)],
           ),
         ),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator(color: Colors.white))
+            : data == null
+                ? const Center(child: Text("Erreur de chargement", style: TextStyle(color: Colors.white)))
+                : _buildContenu(),
+      ),
+    );
+  }
+
+  Widget _buildContenu() {
+    final autorisation = data!["autorisation"] as Map<String, dynamic>;
+    final alertes      = data!["alertes"]      as Map<String, dynamic>;
+    final types        = data!["types"]        as Map<String, dynamic>;
+    final verr         = data!["ecran_verrouillage"] as Map<String, dynamic>;
+    final popupVisible = types["popup_visible"] == true;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // ── Switch principal ──────────────────────────────────────────────
+        SwitchListTile(
+          title: const Text("Autorisation des notifications", style: TextStyle(color: Colors.white)),
+          value: autorisation["autorisees"] == true,
+          activeThumbColor: Colors.blue,
+          onChanged: (v) => _patch("/notifications/autorisation", {"autorisees": v}),
+        ),
+
+        const SizedBox(height: 10),
+        const Text("Alertes", style: TextStyle(color: Colors.white70, fontSize: 16)),
+
+        // ── Mode son / discret ────────────────────────────────────────────
+        RadioListTile<String>(
+          title: const Text("Autoriser le son et la vibration", style: TextStyle(color: Colors.white)),
+          value: "son",
+          groupValue: alertes["mode"],
+          onChanged: (v) => _patch("/notifications/mode-alerte", {"mode": v}),
+        ),
+        RadioListTile<String>(
+          title: const Text("Discret", style: TextStyle(color: Colors.white)),
+          value: "discret",
+          groupValue: alertes["mode"],
+          onChanged: (v) => _patch("/notifications/mode-alerte", {"mode": v}),
+        ),
+
+        const SizedBox(height: 20),
+        const Text("Types de notification", style: TextStyle(color: Colors.white70, fontSize: 16)),
+        const SizedBox(height: 10),
+
+        // ── Cartes types ──────────────────────────────────────────────────
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            /* ===== SWITCH PRINCIPAL ===== */
-            SwitchListTile(
-              title: const Text(
-                "Autorisation des notifications",
-                style: TextStyle(color: Colors.white),
+            _NotifCard(
+              title: "Écran verr.",
+              isAllowed: types["ecran_verrouillage"] == true,
+              onTap: () => _patch("/notifications/types", {
+                "ecran_verrouillage": !(types["ecran_verrouillage"] == true),
+              }),
+            ),
+            _NotifCard(
+              title: "Badge",
+              isAllowed: types["badge"] == true,
+              onTap: () => _patch("/notifications/types", {
+                "badge": !(types["badge"] == true),
+              }),
+            ),
+            if (popupVisible)
+              _NotifCard(
+                title: "Pop-up",
+                isAllowed: types["popup"] == true,
+                onTap: () => _patch("/notifications/types", {
+                  "popup": !(types["popup"] == true),
+                }),
               ),
-              value: allowNotifications,
-              activeThumbColor: Colors.blue,
-              onChanged: (value) {
-                setState(() {
-                  allowNotifications = value;
-                });
-              },
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        // ── Contenu écran verrouillage ────────────────────────────────────
+        ListTile(
+          title: const Text("Notif. sur écran verrouillage", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            verr["contenu"] == "afficher" ? "Afficher le contenu" : "Masquer le contenu",
+            style: const TextStyle(color: Colors.blueAccent),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+          onTap: () => _showVerrDialog(verr["contenu"]),
+        ),
+
+        const SizedBox(height: 10),
+
+        // ── Catégories ────────────────────────────────────────────────────
+        ListTile(
+          title: const Text("Catégories de notification", style: TextStyle(color: Colors.white)),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => _CategoriesScreen(
+                categories: Map<String, dynamic>.from(data!["categories"]),
+                onUpdate: _patchCategorie,
+              ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
 
-            const SizedBox(height: 10),
-
-            const Text(
-              "Alertes",
-              style: TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-
-            /* ===== CHOIX SON / DISCRET ===== */
+  void _showVerrDialog(String current) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Contenu sur écran verrouillé"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             RadioListTile<String>(
-              title: const Text(
-                "Autoriser le son et la vibration",
-                style: TextStyle(color: Colors.white),
-              ),
-              value: "son",
-              groupValue: alertMode,
-              onChanged: (value) {
-                setState(() {
-                  alertMode = value!;
-                  popupAllowed = true; // en mode son, pop-up possible
-                });
+              title: const Text("Afficher le contenu"),
+              value: "afficher",
+              groupValue: current,
+              onChanged: (v) {
+                Navigator.pop(ctx);
+                _patch("/notifications/ecran-verrouillage", {"contenu": v});
               },
             ),
-
             RadioListTile<String>(
-              title: const Text(
-                "Discret",
-                style: TextStyle(color: Colors.white),
-              ),
-              value: "discret",
-              groupValue: alertMode,
-              onChanged: (value) {
-                setState(() {
-                  alertMode = value!;
-                  popupAllowed = false; // EN DISCRET → PAS DE POP-UP
-                });
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            const Text(
-              "Types de notification",
-              style: TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-
-            const SizedBox(height: 10),
-
-            /* ===== CARTES (comportement EXACT demandé) ===== */
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                NotificationCard(
-                  title: "Écran verr.",
-                  isAllowed: lockScreenAllowed,
-                  onTap: () {
-                    setState(() {
-                      lockScreenAllowed = !lockScreenAllowed;
-                    });
-                  },
-                ),
-
-                NotificationCard(
-                  title: "Badge",
-                  isAllowed: badgeAllowed,
-                  onTap: () {
-                    setState(() {
-                      badgeAllowed = !badgeAllowed;
-                    });
-                  },
-                ),
-
-                // 👉 POP-UP : visible UNIQUEMENT en mode SON
-                if (alertMode == "son")
-                  NotificationCard(
-                    title: "Pop-up",
-                    isAllowed: popupAllowed,
-                    onTap: () {
-                      setState(() {
-                        popupAllowed = !popupAllowed;
-                      });
-                    },
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /* ===== NOTIF SUR ÉCRAN VERROUILLAGE ===== */
-            ListTile(
-              title: const Text(
-                "Notif. sur écran verrouillage",
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: Text(
-                lockScreenContent == "afficher"
-                    ? "Afficher le contenu"
-                    : "Masquer le contenu",
-                style: const TextStyle(color: Colors.blueAccent),
-              ),
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white70,
-                size: 16,
-              ),
-              onTap: () {
-                _showLockScreenDialog();
-              },
-            ),
-
-            const SizedBox(height: 10),
-
-            /* ===== CATÉGORIES DE NOTIFICATION ===== */
-            ListTile(
-              title: const Text(
-                "Catégories de notification",
-                style: TextStyle(color: Colors.white),
-              ),
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white70,
-                size: 16,
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NotificationCategoriesScreen(),
-                  ),
-                );
+              title: const Text("Masquer le contenu"),
+              value: "masquer",
+              groupValue: current,
+              onChanged: (v) {
+                Navigator.pop(ctx);
+                _patch("/notifications/ecran-verrouillage", {"contenu": v});
               },
             ),
           ],
@@ -186,59 +204,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-
-  /* ===== FENÊTRE "AFFICHER / MASQUER" (comme ton 1er écran) ===== */
-  void _showLockScreenDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Contenu sur écran verrouillé"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text("Afficher le contenu"),
-                value: "afficher",
-                groupValue: lockScreenContent,
-                onChanged: (value) {
-                  setState(() {
-                    lockScreenContent = value!;
-                  });
-                  Navigator.pop(context);
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text("Masquer le contenu"),
-                value: "masquer",
-                groupValue: lockScreenContent,
-                onChanged: (value) {
-                  setState(() {
-                    lockScreenContent = value!;
-                  });
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
 
-/* ===== CARTE NOTIFICATION ===== */
-class NotificationCard extends StatelessWidget {
+// ── Carte notification ────────────────────────────────────────────────────────
+class _NotifCard extends StatelessWidget {
   final String title;
   final bool isAllowed;
   final VoidCallback onTap;
-
-  const NotificationCard({
-    super.key,
-    required this.title,
-    required this.isAllowed,
-    required this.onTap,
-  });
+  const _NotifCard({required this.title, required this.isAllowed, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -253,18 +226,12 @@ class NotificationCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(
-              Icons.notifications,
-              color: isAllowed ? Colors.blue : Colors.grey,
-            ),
+            Icon(Icons.notifications, color: isAllowed ? Colors.blue : Colors.grey),
             const SizedBox(height: 6),
             Text(title, style: const TextStyle(color: Colors.white)),
             Text(
               isAllowed ? "Autorisé" : "Non autorisé",
-              style: TextStyle(
-                color: isAllowed ? Colors.blueAccent : Colors.grey,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: isAllowed ? Colors.blueAccent : Colors.grey, fontSize: 12),
             ),
           ],
         ),
@@ -273,22 +240,38 @@ class NotificationCard extends StatelessWidget {
   }
 }
 
-/* ===== PAGE CATÉGORIES (comme ton 2e écran) ===== */
-class NotificationCategoriesScreen extends StatefulWidget {
-  const NotificationCategoriesScreen({super.key});
+// ── Page catégories ───────────────────────────────────────────────────────────
+class _CategoriesScreen extends StatefulWidget {
+  final Map<String, dynamic> categories;
+  final Future<void> Function(Map<String, dynamic>) onUpdate;
+  const _CategoriesScreen({required this.categories, required this.onUpdate});
 
   @override
-  State<NotificationCategoriesScreen> createState() =>
-      _NotificationCategoriesScreenState();
+  State<_CategoriesScreen> createState() => _CategoriesScreenState();
 }
 
-class _NotificationCategoriesScreenState
-    extends State<NotificationCategoriesScreen> {
-  bool majApps = true;
-  bool meteoExtreme = true;
-  bool bulletin = true;
-  bool notifEnCours = false;
-  bool actualisation = true;
+class _CategoriesScreenState extends State<_CategoriesScreen> {
+  late Map<String, dynamic> cats;
+
+  @override
+  void initState() {
+    super.initState();
+    cats = Map<String, dynamic>.from(widget.categories);
+  }
+
+  Future<void> _toggle(String key) async {
+    final newVal = !(cats[key] == true);
+    setState(() => cats[key] = newVal);
+    await widget.onUpdate({key: newVal});
+  }
+
+  static const Map<String, String> _labels = {
+    "mises_a_jour_apps":    "Mises à jour des applications",
+    "meteo_extreme":        "Météo extrême",
+    "bulletin_quotidien":   "Bulletin météo quotidien",
+    "notification_en_cours": "Notification en cours",
+    "actualisation_meteo":  "Actualisation de la météo",
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -307,57 +290,14 @@ class _NotificationCategoriesScreenState
         ),
         child: ListView(
           padding: const EdgeInsets.all(16),
-          children: [
-            SwitchListTile(
-              title: const Text(
-                "Mises à jour des applications",
-                style: TextStyle(color: Colors.white),
-              ),
-              value: majApps,
+          children: _labels.entries.map((e) {
+            return SwitchListTile(
+              title: Text(e.value, style: const TextStyle(color: Colors.white)),
+              value: cats[e.key] == true,
               activeThumbColor: Colors.blue,
-              onChanged: (v) => setState(() => majApps = v),
-            ),
-
-            SwitchListTile(
-              title: const Text(
-                "Météo extrême",
-                style: TextStyle(color: Colors.white),
-              ),
-              value: meteoExtreme,
-              activeThumbColor: Colors.blue,
-              onChanged: (v) => setState(() => meteoExtreme = v),
-            ),
-
-            SwitchListTile(
-              title: const Text(
-                "Bulletin météo quotidien",
-                style: TextStyle(color: Colors.white),
-              ),
-              value: bulletin,
-              activeThumbColor: Colors.blue,
-              onChanged: (v) => setState(() => bulletin = v),
-            ),
-
-            SwitchListTile(
-              title: const Text(
-                "Notification en cours",
-                style: TextStyle(color: Colors.white),
-              ),
-              value: notifEnCours,
-              activeThumbColor: Colors.blue,
-              onChanged: (v) => setState(() => notifEnCours = v),
-            ),
-
-            SwitchListTile(
-              title: const Text(
-                "Actualisation de la météo",
-                style: TextStyle(color: Colors.white),
-              ),
-              value: actualisation,
-              activeThumbColor: Colors.blue,
-              onChanged: (v) => setState(() => actualisation = v),
-            ),
-          ],
+              onChanged: (_) => _toggle(e.key),
+            );
+          }).toList(),
         ),
       ),
     );
