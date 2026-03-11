@@ -1,23 +1,14 @@
-
 import os
-import joblib          # ← joblib au lieu de pickle
-import pickle          # ← seulement pour les listes de features
+import joblib
 import numpy as np
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 
 
 def _load_joblib(filename: str):
-    """Charge un modèle sauvegardé avec joblib.dump()"""
+    """Charge un modèle ou liste de features sauvegardé avec joblib.dump()"""
     path = os.path.join(MODELS_DIR, filename)
     return joblib.load(path)
-
-
-def _load_pickle(filename: str):
-    """Charge une liste de features sauvegardée avec pickle.dump()"""
-    path = os.path.join(MODELS_DIR, filename)
-    with open(path, "rb") as f:
-        return pickle.load(f)
 
 
 # ── Chargement unique au démarrage ────────────────────────────────────────────
@@ -31,14 +22,12 @@ scaler_rain         = _load_joblib("scaler_rain.pkl")
 scaler_wind         = _load_joblib("scaler_wind_binary.pkl")
 scaler_extreme      = _load_joblib("scaler_extreme.pkl")
 
-# Listes de features (sauvegardées avec pickle natif → pas joblib)
-features_rain       = _load_pickle("features_rain.pkl")
-features_wind       = _load_pickle("features_wind_binary.pkl")
-features_extreme    = _load_pickle("features_extreme.pkl")
+features_rain       = _load_joblib("features_rain.pkl")
+features_wind       = _load_joblib("features_wind_binary.pkl")
+features_extreme    = _load_joblib("features_extreme.pkl")
 
 
 def _to_array(features_dict: dict, feature_list: list) -> np.ndarray:
-    """Convertit un dict de features en tableau numpy dans le bon ordre."""
     row = [features_dict.get(f, 0.0) for f in feature_list]
     return np.array([row], dtype=float)
 
