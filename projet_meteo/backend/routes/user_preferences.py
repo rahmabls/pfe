@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from services.preferences_service import save_preferences, get_preferences
+from services.preferences_service import update_preferences, get_all_preferences
 
 router = APIRouter(prefix="/user", tags=["User Preferences"])
 
@@ -11,8 +11,15 @@ class Preferences(BaseModel):
     heat_alert: bool
 
 @router.post("/preferences")
-def update_preferences(prefs: Preferences):
-    updated = save_preferences(prefs.dict())
+def save_preferences(prefs: Preferences):
+    updated = update_preferences({
+        "notifications": {"autorisees": prefs.notifications},
+        "alertes": {
+            "pluie": prefs.rain_alert,
+            "vent_fort": prefs.wind_alert,
+            "canicule": prefs.heat_alert,
+        }
+    })
     return {
         "message": "Préférences mises à jour",
         "preferences": updated
@@ -20,4 +27,4 @@ def update_preferences(prefs: Preferences):
 
 @router.get("/preferences")
 def read_preferences():
-    return get_preferences()
+    return get_all_preferences()

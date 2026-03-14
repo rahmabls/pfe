@@ -1,4 +1,3 @@
-
 from . import (
     astronomy,
     pluie,
@@ -10,4 +9,6 @@ from . import (
     user_preferences,
     display_weather,
     auto_update,
+    chatbot,
+    accueil,  # ← ajoute cette ligne
 )

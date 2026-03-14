@@ -1,30 +1,31 @@
 import os
 import joblib
 import numpy as np
+import pandas as pd
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 
 
 def _load_joblib(filename: str):
-    """Charge un modèle ou liste de features sauvegardé avec joblib.dump()"""
     path = os.path.join(MODELS_DIR, filename)
     return joblib.load(path)
 
 
 # ── Chargement unique au démarrage ────────────────────────────────────────────
-model_temp_1h       = _load_joblib("model_temperature_1h.pkl")
-model_temp_24h      = _load_joblib("model_temperature_24h.pkl")
-model_rain          = _load_joblib("model_rain_logistic.pkl")
-model_wind          = _load_joblib("model_wind_binary.pkl")
-model_canicule      = _load_joblib("model_extreme_logreg.pkl")
+model_temp_1h    = _load_joblib("model_temperature_1h.pkl")
+model_temp_24h   = _load_joblib("model_temperature_24h.pkl")
+model_rain       = _load_joblib("model_rain_logistic.pkl")
+model_wind       = _load_joblib("model_wind_binary.pkl")
+model_canicule   = _load_joblib("model_extreme_logreg.pkl")
 
-scaler_rain         = _load_joblib("scaler_rain.pkl")
-scaler_wind         = _load_joblib("scaler_wind_binary.pkl")
-scaler_extreme      = _load_joblib("scaler_extreme.pkl")
+scaler_rain      = _load_joblib("scaler_rain.pkl")
+scaler_wind      = _load_joblib("scaler_wind_binary.pkl")
+scaler_extreme   = _load_joblib("scaler_extreme.pkl")
 
-features_rain       = _load_joblib("features_rain.pkl")
-features_wind       = _load_joblib("features_wind_binary.pkl")
-features_extreme    = _load_joblib("features_extreme.pkl")
+features_rain    = _load_joblib("features_rain.pkl")
+features_wind    = _load_joblib("features_wind_binary.pkl")
+features_extreme = _load_joblib("features_extreme.pkl")
+features_temp    = _load_joblib("model_features.pkl")
 
 
 def _to_array(features_dict: dict, feature_list: list) -> np.ndarray:
@@ -35,14 +36,12 @@ def _to_array(features_dict: dict, feature_list: list) -> np.ndarray:
 # ── Température ───────────────────────────────────────────────────────────────
 
 def predict_temperature_1h(features: dict) -> float:
-    import pandas as pd
-    X = pd.DataFrame([features])
+    X = pd.DataFrame([features])[features_temp]
     return float(model_temp_1h.predict(X)[0])
 
 
 def predict_temperature_24h(features: dict) -> float:
-    import pandas as pd
-    X = pd.DataFrame([features])
+    X = pd.DataFrame([features])[features_temp]
     return float(model_temp_24h.predict(X)[0])
 
 

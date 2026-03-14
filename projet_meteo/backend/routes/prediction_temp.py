@@ -8,7 +8,7 @@ router = APIRouter(prefix="/prediction/temperature", tags=["🌡️ Température
 @router.get("/1h")
 def temperature_1h():
     """Prédit la température dans 1 heure."""
-    features = data_svc.get_features_for_temp()
+    features = data_svc.get_features_for_model_features()  # ← avec lags
     predicted = ml.predict_temperature_1h(features)
     return {
         "horizon": "1h",
@@ -20,7 +20,7 @@ def temperature_1h():
 @router.get("/24h")
 def temperature_24h():
     """Prédit la température dans 24 heures."""
-    features = data_svc.get_features_for_temp()
+    features = data_svc.get_features_for_model_features()  # ← avec lags
     predicted = ml.predict_temperature_24h(features)
     return {
         "horizon": "24h",
@@ -32,7 +32,7 @@ def temperature_24h():
 @router.get("/all")
 def temperature_all():
     """Retourne les prédictions 1h et 24h ensemble."""
-    features = data_svc.get_features_for_temp()
+    features = data_svc.get_features_for_model_features()  # ← avec lags
     return {
         "temperature_actuelle_C": round(features["temperature_2m"], 1),
         "dans_1h_C":  round(ml.predict_temperature_1h(features), 1),

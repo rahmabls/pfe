@@ -1,0 +1,31 @@
+{
+  "alertes": {
+    "pluie": true,
+    "vent_fort": true,
+    "canicule": true
+  },
+  "meteo_locale": {
+    "accepter": true,
+    "actualisation_automatique": true,
+    "affichage_ecran_applis": false
+  },
+  "notifications": {
+    "autorisees": true,
+    "mode_alerte": "son",
+    "ecran_verrouillage": true,
+    "badge": true,
+    "popup": true,
+    "contenu_ecran_verrouillage": "afficher",
+    "categories": {
+      "mises_a_jour_apps": true,
+      "meteo_extreme": true,
+      "bulletin_quotidien": true,
+      "notification_en_cours": false,
+      "actualisation_meteo": true
+    }
+  },
+  "personnalisation": {
+    "compte_connecte": null,
+    "methode_connexion": null
+  }
+}

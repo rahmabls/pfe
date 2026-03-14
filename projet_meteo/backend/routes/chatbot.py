@@ -7,8 +7,7 @@ import services.ml_service as ml
 router = APIRouter(prefix="/chatbot", tags=["🤖 Chatbot Météo"])
 
 # ── Config Gemini ──────────────────────────────────────────────────────────
-GEMINI_API_KEY = "AIzaSyBGDPqhO9zaL0eGU1yRHCPFrDnSWf6DEvY"
-client = genai.Client(api_key=GEMINI_API_KEY)
+GEMINI_API_KEY = "AIzaSyCytX5FrLVXBBug_MND6jpM5366Ae2GAg0"
 
 
 class ChatRequest(BaseModel):
@@ -16,7 +15,7 @@ class ChatRequest(BaseModel):
 
 
 def _build_context() -> str:
-    temp_f  = data_svc.get_features_for_temp()
+    temp_f  = data_svc.get_features_for_model_features()
     rain_f  = data_svc.get_features_for_rain()
     wind_f  = data_svc.get_features_for_wind()
     canic_f = data_svc.get_features_for_canicule()
@@ -52,14 +51,21 @@ Utilise uniquement les données ci-dessous pour répondre aux questions météo.
 
 @router.post("/")
 def chat(req: ChatRequest):
-    context = _build_context()
-    prompt  = f"{context}\n\nQuestion de l'utilisateur : {req.message}"
-
-    response = client.models.generate_content(
-        model="gemini-1.5-flash",
-        contents=prompt,
-    )
-    return {
-        "question": req.message,
-        "reponse":  response.text,
-    }
+    try:
+        client  = genai.Client(api_key=GEMINI_API_KEY)  # ← créé ici à chaque requête
+        context = _build_context()
+        prompt  = f"{context}\n\nQuestion de l'utilisateur : {req.message}"
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+        return {
+            "question": req.message,
+            "reponse":  response.text,
+        }
+    except Exception as e:
+        return {
+            "question": req.message,
+            "reponse":  "Le chatbot est temporairement indisponible. Réessayez dans quelques minutes.",
+            "erreur":   str(e)
+        }
