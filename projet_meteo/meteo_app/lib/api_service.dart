@@ -16,6 +16,21 @@ class ApiService {
     return _handle(response);
   }
 
+  // ── NOUVEAU ────────────────────────────────────────────
+  static Future<List<dynamic>> getList(String endpoint) async {
+    final response = await http
+        .get(Uri.parse("$baseUrl$endpoint"), headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data as List<dynamic>;
+    }
+    throw Exception(
+      "Erreur ${response.statusCode} : ${data['detail'] ?? response.body}",
+    );
+  }
+  // ───────────────────────────────────────────────────────
+
   static Future<Map<String, dynamic>> patch(
     String endpoint,
     Map<String, dynamic> body,

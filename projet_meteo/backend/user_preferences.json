@@ -11,7 +11,7 @@
   },
   "notifications": {
     "autorisees": true,
-    "mode_alerte": "son",
+    "mode_alerte": "discret",
     "ecran_verrouillage": true,
     "badge": true,
     "popup": true,
